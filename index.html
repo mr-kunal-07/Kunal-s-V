@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en" data-theme="paper">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vault.svg" /><meta name="theme-color" content="#161616" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="A personal space for your photos, files, folders, and thoughts." />
+    <title>Kunal’s Vault</title>
+  <style>
+html,body{margin:0;background:#f2ece3;color:#302a26}.initial-vault{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:Arial,sans-serif;gap:16px}.initial-vault img{width:64px;height:64px;border-radius:10px}.initial-vault strong{font-size:24px;font-weight:500}.initial-vault p{font-size:13px;color:#75685d;margin:0}.initial-vault-track{width:140px;height:3px;background:#d9cfc2;overflow:hidden}.initial-vault-track:after{content:'';display:block;width:45%;height:100%;background:#a8442e;animation:initial-slide 1.6s ease-in-out infinite}@keyframes initial-slide{from{transform:translateX(-110%)}to{transform:translateX(325%)}}@media(prefers-reduced-motion:reduce){.initial-vault-track:after{animation:none}}
+</style>
+</head>
+  <body>
+    <div id="root"><div class="initial-vault" role="status" aria-live="polite"><img src="/vault.svg" alt=""/><strong>Kunal&#8217;s Vault</strong><p id="startup-status">Opening your vault…</p><div class="initial-vault-track" aria-hidden="true"></div></div></div>
+    <script type="module">
+  import('/src/main.jsx').catch((error) => {
+    console.error('Vault startup failed:', error);
+    const status = document.getElementById('startup-status');
+    if (status) status.textContent = 'Unable to load the app. Please refresh to try again.';
+  });
+</script>
+  </body>
+</html>
+
+
+
+
+
+

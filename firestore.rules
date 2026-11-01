@@ -1,0 +1,86 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{uid}/daybook/{taskId} {
+      function owner() { return request.auth != null && request.auth.uid == uid && uid == 'TBuHUAFGhjXCjRVPU1nA3DKIBtk2'; }
+      function validTask() {
+        let d = request.resource.data;
+        return d.keys().hasOnly(['title','date','priority','done','createdAt','updatedAt','slot','notes','subtasks','recurrenceId','carriedFrom','suppressed'])
+          && d.title is string && d.title.size() > 0 && d.title.size() <= 1200
+          && d.date is string && d.date.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')
+          && d.priority in ['normal','high'] && d.done is bool
+          && (!('slot' in d) || d.slot in ['morning','afternoon','evening'])
+          && (!('notes' in d) || (d.notes is string && d.notes.size() <= 80000))
+          && (!('subtasks' in d) || (d.subtasks is list && d.subtasks.size() <= 100))
+          && (!('recurrenceId' in d) || d.recurrenceId is string)
+          && (!('suppressed' in d) || d.suppressed is bool)
+          && (!('carriedFrom' in d) || (d.carriedFrom is string && d.carriedFrom.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')))
+          && d.createdAt is timestamp && d.updatedAt == request.time;
+      }
+      allow read, delete: if owner();
+      allow create: if owner() && validTask() && request.resource.data.createdAt == request.time;
+      allow update: if owner() && validTask()
+        && request.resource.data.createdAt == resource.data.createdAt
+        && (request.resource.data.date == resource.data.date || (!resource.data.done && request.resource.data.date > resource.data.date));
+    }
+    match /users/{uid}/recurringTasks/{scheduleId} {
+      function owner() { return request.auth != null && request.auth.uid == uid && uid == 'TBuHUAFGhjXCjRVPU1nA3DKIBtk2'; }
+      function validSchedule() {
+        let d = request.resource.data;
+        return d.keys().hasOnly(['title','priority','slot','repeat','weekdays','enabled','startDate','createdAt','updatedAt'])
+          && d.title is string && d.title.size() > 0 && d.title.size() <= 1200
+          && d.priority in ['normal','high'] && d.slot in ['morning','afternoon','evening']
+          && d.repeat in ['daily','weekdays'] && d.weekdays is list && d.weekdays.size() <= 7
+          && d.weekdays.toSet().hasOnly([0,1,2,3,4,5,6])
+          && (d.repeat == 'daily' || d.weekdays.size() > 0)
+          && d.enabled is bool && d.startDate is string && d.startDate.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')
+          && d.createdAt is timestamp && d.updatedAt == request.time;
+      }
+      allow read, delete: if owner();
+      allow create: if owner() && validSchedule() && request.resource.data.createdAt == request.time;
+      allow update: if owner() && validSchedule() && request.resource.data.createdAt == resource.data.createdAt;
+    }
+    match /users/{uid}/memories/{memoryId} {
+      function owner() { return request.auth != null && request.auth.uid == uid && uid == 'TBuHUAFGhjXCjRVPU1nA3DKIBtk2'; }
+      function valid() {
+        let d = request.resource.data;
+        return d.keys().hasOnly(['name','kind','parentId','favorite','content','storagePath','size','mimeType','createdAt','updatedAt','memoryDate','tags','noteHtml','deletedAt','pinned','url','folderColor','noteAttachments','checklist'])
+          && d.name is string && d.name.size() > 0 && d.name.size() <= 256
+          && d.kind in ['folder','note','file','link']
+          && (d.parentId == null || (d.parentId is string && d.parentId != memoryId))
+          && d.favorite is bool
+          && (!('checklist' in d) || (d.checklist is list && d.checklist.size() <= 100))
+          && (!('noteAttachments' in d) || (d.noteAttachments is list && d.noteAttachments.size() <= 10))
+          && (!('folderColor' in d) || (d.folderColor is string && d.folderColor.matches('#[0-9a-fA-F]{6}')))
+          && (d.kind != 'link' || (d.url is string && d.url.size() <= 4000 && d.url.matches('https?://.+') && d.content is string && d.content.size() <= 800000))
+          && (!('pinned' in d) || d.pinned is bool)
+          && (!('deletedAt' in d) || d.deletedAt == null || d.deletedAt is timestamp)
+          && (!('noteHtml' in d) || (d.noteHtml is string && d.noteHtml.size() <= 800000))
+          && (!('memoryDate' in d) || (d.memoryDate is string && (d.memoryDate == '' || d.memoryDate.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}'))))
+          && (!('tags' in d) || (d.tags is list && d.tags.size() <= 20 && d.tags.toSet().size() == d.tags.size() && d.tags.join(',').size() <= 1100))
+          && d.createdAt is timestamp && d.updatedAt == request.time
+          && (d.kind != 'note' || (d.content is string && d.content.size() <= 800000))
+          && (d.kind != 'file' || (d.storagePath is string
+            && d.storagePath.matches('users/' + uid + '/' + memoryId + '/[^/]+')
+            && d.size is number && d.size >= 0 && d.size <= 104857600 && d.mimeType is string));
+      }
+      allow read, delete: if owner();
+      allow create: if owner() && valid() && request.resource.data.createdAt == request.time;
+      allow update: if owner() && valid()
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.kind == resource.data.kind
+        && (resource.data.kind != 'file' || (request.resource.data.storagePath == resource.data.storagePath
+          && request.resource.data.size == resource.data.size && request.resource.data.mimeType == resource.data.mimeType));
+    }
+  }
+}
+
+
+
+
+
+
+
+
+
+
