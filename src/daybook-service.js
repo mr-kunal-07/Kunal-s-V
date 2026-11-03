@@ -4,7 +4,7 @@ import { shiftDay, isScheduled, occurrenceId } from './daybook-utils'
 export const tasksFor=uid=>collection(db,'users',uid,'daybook')
 export const schedulesFor=uid=>collection(db,'users',uid,'recurringTasks')
 export async function materialize(uid,templates,date){
- for(const template of templates.filter(t=>isScheduled(t,date))){const target=doc(tasksFor(uid),occurrenceId(template.id,date));await runTransaction(db,async tx=>{const existing=await tx.get(target);if(!existing.exists())tx.set(target,{title:template.title,date,priority:template.priority,slot:template.slot,notes:'',subtasks:[],done:false,recurrenceId:template.id,createdAt:serverTimestamp(),updatedAt:serverTimestamp()})})}
+ for(const template of templates.filter(t=>isScheduled(t,date))){const target=doc(tasksFor(uid),occurrenceId(template.id,date));await runTransaction(db,async tx=>{const existing=await tx.get(target);if(!existing.exists())tx.set(target,{title:template.title,date,priority:template.priority,notes:'',subtasks:[],done:false,recurrenceId:template.id,createdAt:serverTimestamp(),updatedAt:serverTimestamp()})})}
 }
 export async function carryForward(uid,date){
  const yesterday=shiftDay(date,-1),snapshot=await getDocs(query(tasksFor(uid),where('date','==',yesterday)))
@@ -15,14 +15,15 @@ export async function carryForward(uid,date){
  }
  return moved
 }
-export async function createPlannedTask(uid,{title,date,priority,slot,repeat,weekdays}){
- const batch=writeBatch(db),data={title,date,priority,slot,notes:'',subtasks:[],done:false,createdAt:serverTimestamp(),updatedAt:serverTimestamp()}
+export async function createPlannedTask(uid,{title,date,priority,repeat,weekdays}){
+ const batch=writeBatch(db),data={title,date,priority,notes:'',subtasks:[],done:false,createdAt:serverTimestamp(),updatedAt:serverTimestamp()}
  if(repeat!=='none'){
   if(repeat==='weekdays'&&!weekdays.length)throw new Error('Choose at least one weekday.')
-  const template=doc(schedulesFor(uid));batch.set(template,{title,priority,slot,repeat,weekdays,enabled:true,startDate:date,createdAt:serverTimestamp(),updatedAt:serverTimestamp()})
+  const template=doc(schedulesFor(uid));batch.set(template,{title,priority,repeat,weekdays,enabled:true,startDate:date,createdAt:serverTimestamp(),updatedAt:serverTimestamp()})
   if(isScheduled({enabled:true,startDate:date,repeat,weekdays},date))batch.set(doc(tasksFor(uid),occurrenceId(template.id,date)),{...data,recurrenceId:template.id})
  }else batch.set(doc(tasksFor(uid)),data)
  await batch.commit()
 }
+
 
 

@@ -93,3 +93,11 @@ Repeat supports Once, Daily, or selected weekdays. Schedules are stored in users
 
 Edit opens task notes, subtasks and morning/afternoon/evening slots. Main completion is independent of subtasks. Weekly review shows saved tasks Monday–Sunday; select a day card to open it. Updating an instance does not alter its recurring template. Publish the updated Firestore rules (including recurringTasks) before using these features. Date/schedule/review logic is unit tested; cloud operations still need live verification after rule deployment.
 
+
+## Archive pagination and shared UI styles
+
+The archive initially listens to 25 documents plus one lookahead record, ordered by document ID. Load 25 more expands the bounded live window. The collection renders 25 visible results per UI page, and Select page only selects that page. While partially loaded, counts carry a + marker, folder sizes are withheld, and archive totals offer an explicit Load totals action. Pinned/recent sorting applies to loaded records until the complete archive is available.
+
+Global search (350 ms debounce), folder/filter navigation, complete totals, moves, bulk actions, trash and deletion hydrate the remaining records using cursor-based batches of 100. This preserves existing global search and recursive folder semantics rather than treating a partial inventory as complete. Full hydration is still proportional to archive size; this change reduces initial browsing reads, not the cost of global operations. No metadata migration or new Firestore indexes are needed. Loaded records remain live through a bounded Firestore subscription.
+
+Styles now enter through src/styles.scss with foundation and component partials. Shared compact-control dimensions use --control-height (28px); existing mobile breakpoints, warm-paper colors and focus styling are retained. Day Book uses a shared CompactSelect instead of browser-native priority/repeat menus.

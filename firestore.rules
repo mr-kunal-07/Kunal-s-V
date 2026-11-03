@@ -29,7 +29,7 @@ service cloud.firestore {
         let d = request.resource.data;
         return d.keys().hasOnly(['title','priority','slot','repeat','weekdays','enabled','startDate','createdAt','updatedAt'])
           && d.title is string && d.title.size() > 0 && d.title.size() <= 1200
-          && d.priority in ['normal','high'] && d.slot in ['morning','afternoon','evening']
+          && d.priority in ['normal','high'] && (!('slot' in d) || d.slot in ['morning','afternoon','evening'])
           && d.repeat in ['daily','weekdays'] && d.weekdays is list && d.weekdays.size() <= 7
           && d.weekdays.toSet().hasOnly([0,1,2,3,4,5,6])
           && (d.repeat == 'daily' || d.weekdays.size() > 0)
@@ -74,6 +74,7 @@ service cloud.firestore {
     }
   }
 }
+
 
 
 
