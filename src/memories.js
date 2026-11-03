@@ -1,4 +1,4 @@
-import { collection, doc, setDoc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore'
+import { collection, doc, setDoc, updateDoc, deleteDoc, serverTimestamp, runTransaction } from 'firebase/firestore'
 import { ref, uploadBytesResumable, deleteObject, getDownloadURL } from 'firebase/storage'
 import { db, storage } from './firebase'
 export const memoriesCollection = uid => collection(db, 'users', uid, 'memories')
@@ -41,3 +41,16 @@ export async function deleteNoteAttachment(item) {
  try { await deleteObject(ref(storage,item.storagePath)) } catch(error) { if(error.code !== 'storage/object-not-found')throw error }
 }
 
+
+export async function setChecklistChecked(uid, memoryId, rowId, checked) {
+ return runTransaction(db, async transaction => {
+  const target=memoryRef(uid,memoryId), snapshot=await transaction.get(target)
+  if(!snapshot.exists())throw new Error('This note no longer exists.')
+  const note=snapshot.data()
+  if(note.deletedAt)throw new Error('Restore this note from Trash before checking items.')
+  if(!(note.checklist||[]).some(row=>row.id===rowId))throw new Error('This checklist item was removed. Reopen the note to refresh it.')
+  const checklist=note.checklist.map(row=>row.id===rowId?{...row,checked}:row)
+  transaction.update(target,{checklist,updatedAt:serverTimestamp()})
+  return checklist
+ })
+}

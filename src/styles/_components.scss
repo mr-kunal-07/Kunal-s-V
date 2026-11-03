@@ -1305,3 +1305,20 @@
 
 .load-totals-button { border:0; background:transparent; color:var(--accent); font-size:11px; padding:0; }
 
+
+.memory-view-modal .cds--modal-container { max-inline-size:760px; }
+.memory-view-meta { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; font-size:11px; color:var(--muted); }
+.note-readonly { min-height:0; max-height:none; padding:0; border:0; margin-bottom:16px; }
+.plain-note { white-space:pre-wrap; overflow-wrap:anywhere; font-size:13px; line-height:1.7; }
+.view-saved-link { display:flex; align-items:center; gap:8px; color:var(--accent); font-size:13px; margin-bottom:16px; overflow-wrap:anywhere; }
+.readonly-checklist { border-top:1px solid var(--line); margin:12px 0; padding-top:12px; }
+.readonly-checklist h3 { font-size:12px; margin-bottom:8px; color:var(--muted); }
+.readonly-checklist>div { display:flex; align-items:flex-start; gap:8px; font-size:13px; line-height:1.6; padding:3px 0; overflow-wrap:anywhere; }
+.readonly-checklist .completed { text-decoration:line-through; color:var(--muted); }
+.memory-view-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:16px; padding-top:12px; border-top:1px solid var(--line); }
+
+.view-checklist-row { display:flex; align-items:flex-start; gap:8px; padding:5px 0; font-size:13px; line-height:1.6; cursor:pointer; }
+.view-checklist-row input { accent-color:var(--accent); width:16px; height:16px; margin:2px 0 0; flex-shrink:0; }
+.view-checklist-row span { overflow-wrap:anywhere; min-width:0; }
+.readonly-checklist h3 { display:flex; justify-content:space-between; gap:8px; }
+.checklist-save-status { font-size:10px; font-weight:400; }

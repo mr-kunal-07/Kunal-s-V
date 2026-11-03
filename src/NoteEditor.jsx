@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 
 // Store only text and a small set of formatting tags; no scripts, styles or attributes.
-function cleanHtml(value) {
+export function cleanHtml(value) {
   const document = new DOMParser().parseFromString(value, 'text/html')
   const allowed = new Set(['P','DIV','BR','STRONG','B','EM','I','U','S','STRIKE','UL','OL','LI','H2','H3','BLOCKQUOTE','A'])
   function clean(node) {
@@ -79,4 +79,5 @@ export default function NoteEditor({ content, html, onChange, disabled }) {
     </div><p className="note-editor-help">Select text to format · Ctrl/⌘ + B, I or U</p>
   </div>
 }
+
 
