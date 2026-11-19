@@ -54,6 +54,16 @@ The login form accepts a username or email. The username kunal maps to kunal@tas
 
 Only kunal's Firebase UID is accepted by the app and by the supplied Firestore/Storage rules. Publish the updated rules to enforce this on the backend. The Firebase Authentication password is not stored in Firestore and must have at least six characters.
 
+## Password-protected folders
+
+New folder includes an optional **Protect with password** toggle. When enabled, enter and confirm an 8–128 character password. Existing folders and folders created with the toggle off behave as before. Only a random salt and a PBKDF2-SHA-256 verifier (600,000 iterations) are saved; the password is never stored.
+
+Opening a protected folder prompts for its password. Unlocks stay in memory until refresh or sign-out. Nested protected folders require their own passwords. Locked descendants are hidden from search, favorites, notes, files, gallery previews, and Trash listings. Direct folder URLs are also gated. Bulk downloads and recursive changes reject selections containing any locked folder; move destinations exclude locked folders.
+
+This is an app-level privacy lock, not encryption or a second Firebase authorization boundary. The signed-in owner and project administrators retain backend access. Existing file download URLs remain bearer links. Forgotten folder passwords cannot be recovered through the app.
+
+Publish the updated `firestore.rules` in project `task-d72fd` before creating protected folders. The rules validate the verifier format and prevent client updates from removing or replacing an existing lock. Storage rules do not change. Tests cover password derivation, incorrect passwords, nested locks, direct-path access checks, and missing or cyclic ancestry. Firestore emulator checks also verified valid writes, malformed locks, and owner restrictions.
+
 
 ## Previews, moves, dates and tags
 
@@ -77,7 +87,7 @@ Search now includes note bodies, saved-link descriptions and URLs. Toolbar icons
 
 Voice recording starts only after pressing Start recording and granting microphone permission. Recordings stop after approximately five minutes and can be played before saving. Microphone tracks are stopped on dialog close. Use HTTPS on a phone (localhost is suitable on the development computer).
 
-Document capture uses the phone camera when supported, with an image-picker fallback. Rotate and optional grayscale/contrast are applied to a single JPEG, scaled to a maximum 2400 pixels. No OCR, automatic edge detection, perspective correction, or multipage PDF generation is included. HEIC and other image decoding depends on the browser.
+Document capture uses the phone camera when supported, with an image-picker fallback. All image uploads, including document captures and note attachments, preserve the exact bytes of the file supplied by the device: original resolution, format, embedded metadata, animation, and file size. The app does not resize, compress, convert images to JPEG, or apply saved filters. A capture title can change the filename while preserving its original extension and content. Images up to 100 MB are accepted; larger images are rejected rather than compressed. Audio note attachments retain their 20 MB limit. Files are stored in Firebase Storage, with their size, MIME type, and path in Firestore. Existing images that were previously reduced cannot regain their original quality without being uploaded again. No OCR, automatic edge detection, perspective correction, or multipage PDF generation is included. HEIC and other image previews depend on the browser; uploading does not require decoding the image.
 
 Change folder color through Date & tags in the folder Actions menu. Publish the updated Firestore rules for link and folderColor fields before using them. Camera/microphone behavior and live Firebase saves need verification on your target phone.
 
@@ -95,6 +105,8 @@ Edit opens task notes, subtasks and morning/afternoon/evening slots. Main comple
 
 
 ## Archive pagination and shared UI styles
+
+Sidebar badges match the view opened by each button: All memories counts active items at the archive root, while Notes, Files, Saved links, Favorites and Trash count the accessible records in their respective views. Folder rows and sidebar entries show immediate child counts, excluding trashed children of active folders. Protected-folder counts stay hidden until unlocked. A `+` means the archive is only partially loaded. Day Book shows the task count for its selected date (today in India initially), including completed tasks and excluding suppressed occurrences. The sidebar and daily view share one live task subscription, so additions and deletions update both together.
 
 The archive initially listens to 25 documents plus one lookahead record, ordered by document ID. Load 25 more expands the bounded live window. The collection renders 25 visible results per UI page, and Select page only selects that page. While partially loaded, counts carry a + marker, folder sizes are withheld, and archive totals offer an explicit Load totals action. Pinned/recent sorting applies to loaded records until the complete archive is available.
 

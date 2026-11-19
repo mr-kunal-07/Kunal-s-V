@@ -6,8 +6,9 @@ import { db, explainError } from './firebase'
 import { memoriesCollection, removeMemory, openFile } from './memories'
 import { canMoveTo, parseTags } from './memory-features'
 import { expandSelection, selectionRoots, makeZip } from './bulk-utils'
+import { folderAccess, requireFolderAccess } from './folder-lock'
 
-export default function BulkDialog({ action, selected, items, uid, onClose, onDone }) {
+export default function BulkDialog({ action, selected, items, uid, unlockedFolders, onClose, onDone }) {
   const [destination, setDestination] = useState(''), [tags, setTags] = useState(''), [busy, setBusy] = useState(false), [error, setError] = useState(''), [progress, setProgress] = useState('')
   const expanded = expandSelection(selected, action === 'download' ? items.filter(i => Boolean(i.deletedAt) === Boolean(selected[0]?.deletedAt)) : items), roots = selectionRoots(selected, items)
   const count = ['delete','purge','restore','download'].includes(action) ? expanded.length : selected.length
@@ -17,6 +18,8 @@ export default function BulkDialog({ action, selected, items, uid, onClose, onDo
     if(busy) return
     setBusy(true);setError(''); const completed=[]
     try {
+      requireFolderAccess(expanded, items, unlockedFolders)
+      if (action === 'move' && destination) requireFolderAccess([items.find(item => item.id === destination)], items, unlockedFolders)
       if(action==='move' || action==='tag') {
         const targets=action==='move'?roots:selected
         if(targets.length>400)throw new Error('Select up to 400 items per operation.')
@@ -65,7 +68,7 @@ export default function BulkDialog({ action, selected, items, uid, onClose, onDo
   }
   return <Modal open modalHeading={titles[action]} modalLabel={`${count} ITEMS${action==='delete'||action==='download'?' INCLUDING FOLDER CONTENTS':''}`} primaryButtonText={busy?(progress||'Working…'):action==='move'?'Move here':action==='tag'?'Add tags':action==='download'?'Download ZIP':action==='restore'?'Restore':action==='delete'?'Move to Trash':'Delete permanently'} secondaryButtonText="Cancel" primaryButtonDisabled={busy||!selected.length} danger={action==='purge'} onRequestSubmit={submit} onRequestClose={()=>{if(!busy)onClose()}} preventCloseOnClickOutside>
     {error&&<InlineNotification kind="error" title="Operation incomplete" subtitle={error} hideCloseButton lowContrast/>}
-    {action==='move'&&<Select id="bulk-destination" labelText="Destination" value={destination} onChange={e=>setDestination(e.target.value)} disabled={busy}><SelectItem value="" text="My space (root)"/>{items.filter(i=>i.kind==='folder'&&!i.deletedAt&&roots.every(root=>canMoveTo(root,i.id,items))).sort((a,b)=>path(a).localeCompare(path(b))).map(i=><SelectItem key={i.id} value={i.id} text={path(i)}/>)}</Select>}
+    {action==='move'&&<Select id="bulk-destination" labelText="Destination" value={destination} onChange={e=>setDestination(e.target.value)} disabled={busy}><SelectItem value="" text="My space (root)"/>{items.filter(i=>i.kind==='folder'&&!i.deletedAt&&folderAccess(i,items,unlockedFolders).allowed&&roots.every(root=>canMoveTo(root,i.id,items))).sort((a,b)=>path(a).localeCompare(path(b))).map(i=><SelectItem key={i.id} value={i.id} text={path(i)}/>)}</Select>}
     {action==='tag'&&<TextInput id="bulk-tags" labelText="Tags to add" helperText="Comma-separated. Existing tags are preserved. Maximum 20 tags per item." value={tags} onChange={e=>setTags(e.target.value)} disabled={busy} maxLength={1100}/>}
     {action==='purge'&&<p>These items and their folder contents will be permanently deleted. This cannot be undone.</p>}{action==='delete'&&<p>These items and their folder contents will move to Trash. You can restore them later.</p>}{action==='restore'&&<p>Restore these items and their folder contents to the archive.</p>}
     {action==='download'&&<p>Download files and folder contents in one ZIP. Notes are included as text files. Maximum 200 MB per download.</p>}

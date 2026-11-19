@@ -1,5 +1,7 @@
 import { PreviewSkeleton } from './Loaders'
 import { useEffect, useState, useRef } from 'react'
+import { folderAccess, requireFolderAccess } from './folder-lock'
+import { expandSelection } from './bulk-utils'
 import { Modal, InlineNotification, Button, TextInput, Select, SelectItem } from '@carbon/react'
 import { Download } from '@carbon/icons-react'
 import { openFile, updateMemory } from './memories'
@@ -51,9 +53,9 @@ export function PreviewDialog({ item, images = [], onNavigate, onClose }) {
     {url && <Button as="a" href={url} target="_blank" rel="noopener noreferrer" kind="tertiary" renderIcon={Download}>Open / download original</Button>}
   </Modal>
 }
-export function MoveDialog({ item, items, uid, onClose, onSaved }) {
+export function MoveDialog({ item, items, uid, unlockedFolders, onClose, onSaved }) {
   const [destination, setDestination] = useState(item.parentId || ''), [busy, setBusy] = useState(false), [error, setError] = useState('')
-  const candidates = items.filter(folder => folder.kind === 'folder' && canMoveTo(item, folder.id, items))
+  const candidates = items.filter(folder => folder.kind === 'folder' && !folder.deletedAt && folderAccess(folder, items, unlockedFolders).allowed && canMoveTo(item, folder.id, items))
   function path(folder) {
     const parts = [folder.name], seen = new Set([folder.id]); let id = folder.parentId
     while (id && !seen.has(id)) { seen.add(id); const parent = items.find(i => i.id === id); if (!parent) break; parts.unshift(parent.name); id = parent.parentId }
@@ -63,7 +65,7 @@ export function MoveDialog({ item, items, uid, onClose, onSaved }) {
     const current = items.find(i => i.id === item.id)
     if (!current || !canMoveTo(current, destination || null, items)) { setError('This destination is no longer available.'); return }
     setBusy(true); setError('')
-    try { await updateMemory(uid, item.id, { parentId: destination || null }); onSaved('Memory moved.'); onClose() }
+    try { requireFolderAccess(expandSelection([current], items), items, unlockedFolders); if (destination) requireFolderAccess([items.find(folder => folder.id === destination)], items, unlockedFolders); await updateMemory(uid, item.id, { parentId: destination || null }); onSaved('Memory moved.'); onClose() }
     catch (err) { setError(explainError(err)) } finally { setBusy(false) }
   }
   return <Modal open modalHeading={`Move “${item.name}”`} modalLabel="ORGANIZE" primaryButtonText={busy ? 'Moving…' : 'Move here'} secondaryButtonText="Cancel" primaryButtonDisabled={busy || destination === (item.parentId || '')} onRequestSubmit={save} onRequestClose={() => { if (!busy) onClose() }} preventCloseOnClickOutside>

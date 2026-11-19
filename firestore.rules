@@ -42,9 +42,17 @@ service cloud.firestore {
     }
     match /users/{uid}/memories/{memoryId} {
       function owner() { return request.auth != null && request.auth.uid == uid && uid == 'TBuHUAFGhjXCjRVPU1nA3DKIBtk2'; }
+      function validFolderLock(d) {
+        return !('folderLock' in d) || (d.kind == 'folder' && d.folderLock is map
+          && d.folderLock.keys().hasOnly(['version','iterations','salt','hash'])
+          && d.folderLock.version == 1 && d.folderLock.iterations == 600000
+          && d.folderLock.salt is string && d.folderLock.salt.matches('[a-f0-9]{32}')
+          && d.folderLock.hash is string && d.folderLock.hash.matches('[a-f0-9]{64}'));
+      }
       function valid() {
         let d = request.resource.data;
-        return d.keys().hasOnly(['name','kind','parentId','favorite','content','storagePath','size','mimeType','createdAt','updatedAt','memoryDate','tags','noteHtml','deletedAt','pinned','url','folderColor','noteAttachments','checklist'])
+        return d.keys().hasOnly(['name','kind','parentId','favorite','content','storagePath','size','mimeType','createdAt','updatedAt','memoryDate','tags','noteHtml','deletedAt','pinned','url','folderColor','noteAttachments','checklist','folderLock'])
+          && validFolderLock(d)
           && d.name is string && d.name.size() > 0 && d.name.size() <= 256
           && d.kind in ['folder','note','file','link']
           && (d.parentId == null || (d.parentId is string && d.parentId != memoryId))
@@ -69,6 +77,7 @@ service cloud.firestore {
       allow update: if owner() && valid()
         && request.resource.data.createdAt == resource.data.createdAt
         && request.resource.data.kind == resource.data.kind
+        && (!('folderLock' in resource.data) || request.resource.data.folderLock == resource.data.folderLock)
         && (resource.data.kind != 'file' || (request.resource.data.storagePath == resource.data.storagePath
           && request.resource.data.size == resource.data.size && request.resource.data.mimeType == resource.data.mimeType));
     }
