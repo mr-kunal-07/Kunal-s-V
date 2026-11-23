@@ -2,6 +2,12 @@
 
 Mobile-first React + Vite app using IBM Carbon, Firebase Authentication, Firestore, and Storage.
 
+## Compact Home dashboard
+
+`/home` is the landing page after sign-in and for installed app launches. It brings together today's tasks (India time), inline task creation/completion, quick note/task/upload/folder actions, four recently updated notes, up to six pinned folders, and the existing live sync status. Today updates across midnight and when the app returns to the foreground. Recurring tasks use the same deterministic generation as Day Book. Open Day Book switches to today; its full date navigation and task tools remain available.
+
+Home reuses the shared archive/task subscriptions. Like the existing global archive views, it hydrates remaining archive pages to find recent notes and pinned folders across all folders; cached data renders first and a loading hint identifies partial results. Locked descendants, deleted items and unavailable ancestry are excluded. Pinned password-protected folders still prompt for their password when opened. Pin a folder with **Actions → Pin to top**. The existing `/dashboard` collection and `/dashboard/:folderId` links continue to work. On phones, tasks appear first, actions form a two-column grid, and panels stack vertically. No Firebase rule/index changes or extra dependencies are required.
+
 ## Offline access and phone installation
 
 Keep is an installable PWA. Build with `npm run build`, then use `npm run preview -- --host 127.0.0.1 --port 4174` to test the built service worker locally. The development server serves live source; the production build precaches the app, local fonts and icons for offline launches. Firebase data and uploaded media are not cached by the service worker.

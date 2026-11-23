@@ -1,6 +1,8 @@
 import MemoryViewer from './MemoryViewer'
 import OfflineStatus from './OfflineStatus'
 import InstallApp from './InstallApp'
+import HomeDashboard from './HomeDashboard'
+import useTodayInIndia from './useTodayInIndia'
 import { isOffline, recoveryStore, requireInternet } from './offline'
 import { CreateFolderDialog, UnlockFolderDialog } from './FolderDialogs'
 import { folderAccess, visibleFolderItems, requireFolderAccess } from './folder-lock'
@@ -27,11 +29,11 @@ import { BrowserRouter, Navigate, Route, Routes, useNavigate, useParams, useLoca
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut, sendPasswordResetEmail } from 'firebase/auth'
 
 import { Button, TextInput, PasswordInput, InlineNotification, Modal, Search, Tag, ProgressBar } from '@carbon/react'
-import { Add, ArrowRight, Folder, FolderAdd, Document, DocumentBlank, Image, Video, Music, Upload, Download, Star, StarFilled, Grid, List, Search as SearchIcon, Logout, Menu, Close, OverflowMenuVertical, TrashCan, Edit, Cloud, ChevronRight, Time, Locked, Save, Checkmark, View, Pin, PinFilled, Link as LinkIcon, Microphone, Camera } from '@carbon/icons-react'
+import { Add, ArrowRight, Home as HomeIcon, Folder, FolderAdd, Document, DocumentBlank, Image, Video, Music, Upload, Download, Star, StarFilled, Grid, List, Search as SearchIcon, Logout, Menu, Close, OverflowMenuVertical, TrashCan, Edit, Cloud, ChevronRight, Time, Locked, Save, Checkmark, View, Pin, PinFilled, Link as LinkIcon, Microphone, Camera } from '@carbon/icons-react'
 import { auth, explainError, loginEmail, ownerUid } from './firebase'
 import { memoriesCollection, createMemory, updateMemory, removeMemory, uploadFile, openFile, droppedFiles, fileSize } from './memories'
 
-function Brand() { return <Link className="brand" to="/dashboard"><span className="brand-mark"><img src="/vault.svg" alt="" width="28" height="28" /></span><span>Kunal’s Vault</span></Link> }
+function Brand() { return <Link className="brand" to="/home"><span className="brand-mark"><img src="/vault.svg" alt="" width="28" height="28" /></span><span>Kunal’s Vault</span></Link> }
 function ErrorNotice({ message, onClose }) { return message && <InlineNotification kind="error" title="Something needs attention" subtitle={message} onCloseButtonClick={onClose} lowContrast /> }
 
 function Login() {
@@ -40,7 +42,7 @@ function Login() {
   const navigate = useNavigate()
   async function submit(event) {
     event.preventDefault(); setError(''); setInfo(''); setBusy(true)
-    try { const credential = await signInWithEmailAndPassword(auth, loginEmail(email), password); if (credential.user.uid !== ownerUid) { await signOut(auth); throw new Error('This app is reserved for kunal.') } navigate('/dashboard', { replace: true }) }
+    try { const credential = await signInWithEmailAndPassword(auth, loginEmail(email), password); if (credential.user.uid !== ownerUid) { await signOut(auth); throw new Error('This app is reserved for kunal.') } navigate('/home', { replace: true }) }
     catch (err) { setError(explainError(err)) } finally { setBusy(false) }
   }
   async function reset() {
@@ -87,8 +89,10 @@ const dateLabel = item => item.updatedAt?.toDate ? new Intl.DateTimeFormat('en',
 
 function Dashboard({ user }) {
   const { folderId } = useParams(), navigate = useNavigate(), location = useLocation()
+  const today = useTodayInIndia()
   const [dayBookDate, setDayBookDate] = useState(todayInIndia)
-  const dayBookTasks = useDayBookTasks(user.uid, dayBookDate)
+  const taskDate = location.pathname === '/home' ? today : dayBookDate
+  const dayBookTasks = useDayBookTasks(user.uid, taskDate)
   const {items:archiveItems,loading,loadingMore,hasMore,error,setError,loadMore,loadComplete} = useArchive(user.uid)
   const [unlockedFolders, setUnlockedFolders] = useState({}), [folderDialog, setFolderDialog] = useState(false), [unlockRequest, setUnlockRequest] = useState(null)
   const items = visibleFolderItems(archiveItems, unlockedFolders)
@@ -97,8 +101,8 @@ function Dashboard({ user }) {
   const folderBlocked = !!folderId && !!routeFolder && !routeAccess.allowed
   const invalidDestination = !!folderId && (!routeFolder || !routeAccess.allowed || !!routeFolder.deletedAt)
   const [operationItems,setOperationItems] = useState(null)
-  const [search, setSearch] = useState(''), [filter, setFilter] = useState(location.pathname === '/day-book' ? 'daybook' : 'all'), [view, setView] = useState('list')
-  useEffect(() => { if(location.pathname === '/day-book')setFilter('daybook');else setFilter(current => current === 'daybook' ? 'all' : current) },[location.pathname])
+  const [search, setSearch] = useState(''), [filter, setFilter] = useState(location.pathname === '/home' ? 'home' : location.pathname === '/day-book' ? 'daybook' : 'all'), [view, setView] = useState('list')
+  useEffect(() => { if(location.pathname === '/home')setFilter('home');else if(location.pathname === '/day-book')setFilter('daybook');else setFilter(current => current === 'daybook' || current === 'home' ? 'all' : current) },[location.pathname])
   const [mobileNav, setMobileNav] = useState(false), [modal, setModal] = useState(null)
   const [name, setName] = useState(''), [text, setText] = useState(''), [busy, setBusy] = useState(false)
   const [viewItem,setViewItem] = useState(null)
@@ -162,7 +166,7 @@ function Dashboard({ user }) {
   const title = current?.name || ({ daybook: 'Day Book', all: 'Your memories', favorites: 'Favorites', notes: 'Your notes', links: 'Saved links', files: 'All files', trash: 'Trash' }[filter])
   const crumbs = [], seen = new Set(); let ancestor = current
   while (ancestor && !seen.has(ancestor.id)) { seen.add(ancestor.id); crumbs.unshift(ancestor); ancestor = items.find(i => i.id === ancestor.parentId) }
-  function selectFilter(next) { setFilter(next); navigate(next === 'daybook' ? '/day-book' : '/dashboard'); setMobileNav(false) }
+  function selectFilter(next) { setFilter(next); navigate(next === 'home' ? '/home' : next === 'daybook' ? '/day-book' : '/dashboard'); setMobileNav(false) }
   function showModal(kind, item = null) { if (kind === 'folder') { if (!invalidDestination) setFolderDialog(true); return } setModalError(''); setModal({ kind, item }); setName(item?.name || ''); setText(item?.content || ''); setNoteHtml(item?.noteHtml || ''); setNoteAttachments(item?.noteAttachments || []); setChecklist(item?.checklist || []); setMenu(null) }
   async function save() {
     if (!name.trim() || noteRecording) return
@@ -254,8 +258,8 @@ function Dashboard({ user }) {
     {mobileNav && <button className="nav-backdrop" aria-label="Close navigation" onClick={() => setMobileNav(false)} />}
     <aside className={`sidebar ${mobileNav ? 'is-open' : ''}`}>
       <div className="sidebar-label">PERSONAL SPACE</div>
-      <nav aria-label="Main navigation">{[['daybook', DocumentBlank, 'Day Book'], ['all', Grid, 'All memories'], ['favorites', Star, 'Favorites'], ['notes', DocumentBlank, 'Notes'], ['links', LinkIcon, 'Saved links'], ['files', Document, 'Files'], ['trash', TrashCan, 'Trash']].map(([key, Icon, label]) => <button key={key} className={`nav-item ${filter === key && !folderId ? 'active' : ''}`} onClick={() => selectFilter(key)} title={key === 'daybook' ? `Tasks for ${displayDay(dayBookDate)}` : undefined}>
-        <Icon size={20} /><span>{label}</span><span className="nav-count">{navigationCount(key)}</span>
+      <nav aria-label="Main navigation">{[['home', HomeIcon, 'Home'], ['daybook', DocumentBlank, 'Day Book'], ['all', Grid, 'All memories'], ['favorites', Star, 'Favorites'], ['notes', DocumentBlank, 'Notes'], ['links', LinkIcon, 'Saved links'], ['files', Document, 'Files'], ['trash', TrashCan, 'Trash']].map(([key, Icon, label]) => <button key={key} className={`nav-item ${filter === key && !folderId ? 'active' : ''}`} onClick={() => selectFilter(key)} aria-current={filter === key && !folderId ? 'page' : undefined} title={key === 'daybook' ? `Tasks for ${displayDay(taskDate)}` : undefined}>
+        <Icon size={20} /><span>{label}</span>{key !== 'home' && <span className="nav-count">{navigationCount(key)}</span>}
       </button>)}</nav>
       <div className="sidebar-divider" />
       <div className="sidebar-label folders-label">FOLDERS <button className="icon-button" aria-label="Create folder" disabled={invalidDestination} onClick={() => { showModal('folder'); setMobileNav(false) }}><Add size={18} /></button></div>
@@ -265,7 +269,7 @@ function Dashboard({ user }) {
       <div className="storage-panel"><div><Cloud size={20} /><span>Your archive</span><span className="storage-size">{hasMore ? <button className="load-totals-button" onClick={() => loadComplete().catch(() => {})} disabled={loadingMore}>Load totals</button> : fileSize(totalBytes)}</span></div><p>{files.length}{hasMore ? '+' : ''} files collected</p></div>
     </aside>
     <main className="dashboard" onDragEnter={e => { if (hasFiles(e)) { e.preventDefault(); dragDepth.current++; setDragging(true) } }} onDragOver={e => { if (hasFiles(e)) e.preventDefault() }} onDragLeave={() => { dragDepth.current--; if (dragDepth.current <= 0) setDragging(false) }} onDrop={drop}>
-      <div className="dashboard-inner"><OfflineStatus user={user} items={archiveItems} unlockedFolders={unlockedFolders}/>{filter === 'daybook' ? <DayBook uid={user.uid} date={dayBookDate} onDateChange={setDayBookDate} taskState={dayBookTasks} /> : folderBlocked ? <div className="empty-state locked-folder-state"><div className="empty-icon"><Locked size={40} /></div><h2>Password-protected folder</h2><p>{routeAccess.folder ? `Unlock “${routeAccess.folder.name}” to view its contents.` : 'The folder path is still loading.'}</p>{routeAccess.folder && <Button renderIcon={Locked} onClick={() => setUnlockRequest({ folder: routeAccess.folder })}>Unlock folder</Button>}<Button kind="ghost" onClick={() => selectFilter('all')}>Back to my space</Button></div> : <><div className="dashboard-topbar"><div className="breadcrumb"><button onClick={() => selectFilter('all')}>My space</button>{(crumbs.length > 0 || filter !== 'all') && <ChevronRight size={14} />}{crumbs.length ? crumbs.map((item, i) => <span key={item.id}><button onClick={() => navigate(`/dashboard/${item.id}`)}>{item.name}</button>{i < crumbs.length - 1 && <ChevronRight size={14} />}</span>) : filter !== 'all' ? <span>{title}</span> : null}</div>
+      <div className="dashboard-inner"><OfflineStatus user={user} items={archiveItems} unlockedFolders={unlockedFolders}/>{filter === 'home' ? <><ErrorNotice message={error} onClose={()=>setError('')}/>{uploading && <div className="upload-progress"><ProgressBar label={`Saving ${uploading.index} of ${uploading.total}: ${uploading.name}`} value={Math.round(uploading.progress * 100)} helperText="Keep this page open until your upload finishes." /></div>}<HomeDashboard uid={user.uid} date={today} taskState={dayBookTasks} items={archiveItems} unlockedFolders={unlockedFolders} archiveLoading={loading || loadingMore} archivePartial={hasMore} onOpen={open} onNote={()=>showModal('note')} onFolder={()=>showModal('folder')} onUpload={()=>filesInput.current.click()} onDayBook={()=>{setDayBookDate(today);selectFilter('daybook')}} onNotes={()=>selectFilter('notes')} onMemories={()=>selectFilter('all')} uploading={uploading} toast={toast}/></> : filter === 'daybook' ? <DayBook uid={user.uid} date={dayBookDate} onDateChange={setDayBookDate} taskState={dayBookTasks} /> : folderBlocked ? <div className="empty-state locked-folder-state"><div className="empty-icon"><Locked size={40} /></div><h2>Password-protected folder</h2><p>{routeAccess.folder ? `Unlock “${routeAccess.folder.name}” to view its contents.` : 'The folder path is still loading.'}</p>{routeAccess.folder && <Button renderIcon={Locked} onClick={() => setUnlockRequest({ folder: routeAccess.folder })}>Unlock folder</Button>}<Button kind="ghost" onClick={() => selectFilter('all')}>Back to my space</Button></div> : <><div className="dashboard-topbar"><div className="breadcrumb"><button onClick={() => selectFilter('all')}>My space</button>{(crumbs.length > 0 || filter !== 'all') && <ChevronRight size={14} />}{crumbs.length ? crumbs.map((item, i) => <span key={item.id}><button onClick={() => navigate(`/dashboard/${item.id}`)}>{item.name}</button>{i < crumbs.length - 1 && <ChevronRight size={14} />}</span>) : filter !== 'all' ? <span>{title}</span> : null}</div>
       <div className="page-heading"><div className="heading-actions"><Button className="heading-folder-button" aria-label="New folder" title="New folder" kind="tertiary" renderIcon={FolderAdd} onClick={() => showModal('folder')} disabled={filter === 'trash' || invalidFolder || invalidDestination || !!uploading}><span className="heading-action-text">New folder</span></Button><Button className="heading-upload-button" aria-label="Upload files" title="Upload files" renderIcon={Upload} onClick={() => filesInput.current.click()} disabled={filter === 'trash' || invalidFolder || invalidDestination || !!uploading}><span className="heading-action-text">Upload</span></Button></div></div></div>
       <ErrorNotice message={error} onClose={() => setError('')} />
       {toast && <div className="vault-toast" role="status" aria-live="polite"><Checkmark size={16} aria-hidden="true"/><span>{toast.replace(' selected items ', ' items ')}</span><button type="button" aria-label="Dismiss message" onClick={() => setToast('')}><Close size={16}/></button></div>}
@@ -297,7 +301,7 @@ export default function App() {
   const [user, setUser] = useState(null), [ready, setReady] = useState(false)
   useEffect(() => onAuthStateChanged(auth, current => { setUser(current?.uid === ownerUid ? current : null); if (current && current.uid !== ownerUid) signOut(auth).catch(() => {}); setReady(true) }), [])
   if (!ready) return <VaultLoader />
-  return <BrowserRouter><Routes><Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <Login />} /><Route path="/day-book" element={user ? <Dashboard user={user} /> : <Navigate to="/login" replace />} /><Route path="/dashboard/:folderId?" element={user ? <Dashboard user={user} /> : <Navigate to="/login" replace />} /><Route path="*" element={<Navigate to={user ? '/dashboard' : '/login'} replace />} /></Routes></BrowserRouter>
+  return <BrowserRouter><Routes><Route path="/login" element={user ? <Navigate to="/home" replace /> : <Login />} /><Route path="/home" element={user ? <Dashboard user={user} /> : <Navigate to="/login" replace />} /><Route path="/day-book" element={user ? <Dashboard user={user} /> : <Navigate to="/login" replace />} /><Route path="/dashboard/:folderId?" element={user ? <Dashboard user={user} /> : <Navigate to="/login" replace />} /><Route path="*" element={<Navigate to={user ? '/home' : '/login'} replace />} /></Routes></BrowserRouter>
 }
 
 

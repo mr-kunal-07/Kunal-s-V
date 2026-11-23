@@ -5,7 +5,7 @@ import sharp from 'sharp'
 
 const root=new URL('../dist/',import.meta.url)
 const manifest=JSON.parse(await readFile(new URL('manifest.webmanifest',root),'utf8'))
-assert.equal(manifest.display,'standalone');assert.equal(manifest.start_url,'/dashboard');assert.equal(manifest.scope,'/')
+assert.equal(manifest.display,'standalone');assert.equal(manifest.start_url,'/home');assert.equal(manifest.scope,'/')
 for(const icon of manifest.icons){const metadata=await sharp(await readFile(new URL(icon.src.slice(1),root))).metadata();assert.equal(`${metadata.width}x${metadata.height}`,icon.sizes)}
 assert.ok(manifest.icons.some(icon=>icon.purpose==='maskable'))
 const html=await readFile(new URL('index.html',root),'utf8')

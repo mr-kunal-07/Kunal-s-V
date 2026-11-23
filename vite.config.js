@@ -9,7 +9,7 @@ export default defineConfig({
     includeAssets: ['vault.svg', 'icons/*.png'],
     manifest: {
       id: '/', name: 'Kunal’s Vault', short_name: 'Keep', description: 'Your notes, daily tasks, and personal memories.',
-      start_url: '/dashboard', scope: '/', display: 'standalone', background_color: '#f2ece3', theme_color: '#a8442e',
+      start_url: '/home', scope: '/', display: 'standalone', background_color: '#f2ece3', theme_color: '#a8442e',
       icons: [
         { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
         { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
