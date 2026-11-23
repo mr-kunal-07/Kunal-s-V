@@ -47,11 +47,11 @@
 .home-empty p>span { display:block; font-size:13px; margin-top:4px; }
 .home-note-list { margin:0; padding:0; list-style:none; }
 .home-note-list li+li { border-top:1px solid var(--line); }
-.home-note-list button { display:flex; align-items:center; gap:16px; width:100%; min-height:40px; padding:10px 16px; border:0; color:var(--ink); background:transparent; text-align:left; }
+.home-note-list button { display:grid; grid-template-columns:minmax(0,1fr) max-content; align-items:center; gap:16px; width:100%; min-height:40px; padding:10px 16px; border:0; color:var(--ink); background:transparent; text-align:left; overflow:hidden; }
 .home-note-list button:hover,.home-folder-list button:hover { background:var(--tint); }
 .home-item-icon { display:grid; place-items:center; flex-shrink:0; width:34px; height:34px; border-radius:2px; }
 .home-item-icon.folder { background:var(--home-folder-color,var(--folder)); color:var(--folder-ink); width:38px; height:38px; }
-.home-note-title { flex:1; min-width:0; font-size:14px; line-height:1.4; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+.home-note-title { display:block; min-width:0; font-size:14px; line-height:1.4; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
 .home-note-updated { flex-shrink:0; color:var(--muted); font-size:12px; line-height:1.5; white-space:nowrap; }
 .home-folders { grid-column:1/-1; }
 .home-folder-list { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); list-style:none; margin:0; padding:10px; gap:6px; }

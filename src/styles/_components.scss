@@ -269,7 +269,9 @@
 
 .modal-action-label svg { display:block; flex-shrink:0; width:16px; height:16px; }
 
-:root body button,
+// Home defines its own row and touch-target heights; keep the compact control
+// sizing out of its content buttons so note/folder rows can size naturally.
+:root body button:not(:where(.home-page button)),
 :root body .cds--btn,
 :root body .cds--modal-footer .cds--btn,
 :root body .dashboard-topbar .heading-actions .cds--btn {
