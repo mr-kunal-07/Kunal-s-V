@@ -1,14 +1,18 @@
 import { useRef, useState } from 'react'
 import { Add, Calendar, Checkmark, DocumentBlank, Edit, Folder, FolderAdd, Locked, PinFilled, Upload } from '@carbon/icons-react'
-import { homeSummary, noteExcerpt } from './home-utils'
+import { homeSummary } from './home-utils'
 import { createPlannedTask, updateTask } from './daybook-service'
 import { explainError } from './firebase'
 import useDayBookSchedules from './useDayBookSchedules'
 import useOnline from './useOnline'
 
-function Updated({ item }) {
+function Updated({ item, today }) {
   const value = item.updatedAt?.toDate?.() || item.createdAt?.toDate?.()
-  return value ? <time dateTime={value.toISOString()}>{new Intl.DateTimeFormat('en-IN', { month: 'short', day: 'numeric' }).format(value)}</time> : <span>Just now</span>
+  if (!value) return <span>Just now</span>
+  const year = new Intl.DateTimeFormat('en-IN', { year: 'numeric', timeZone: 'Asia/Kolkata' }).format(value)
+  const label = new Intl.DateTimeFormat('en-IN', { month: 'short', day: 'numeric', ...(year !== today.slice(0,4) ? { year: 'numeric' } : {}), timeZone: 'Asia/Kolkata' }).format(value)
+  const full = new Intl.DateTimeFormat('en-IN', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'Asia/Kolkata' }).format(value)
+  return <time dateTime={value.toISOString()} title={`Last updated ${full}`} aria-label={`Last updated ${full}`}>{label}</time>
 }
 
 export default function HomeDashboard({ uid, date, taskState, items, unlockedFolders, archiveLoading, archivePartial, archiveError, onOpen, onNote, onFolder, onUpload, onDayBook, onNotes, onMemories, uploading, toast }) {
@@ -55,7 +59,7 @@ export default function HomeDashboard({ uid, date, taskState, items, unlockedFol
         <header className="home-panel-heading"><h2 id="home-notes-title">Recent notes</h2><button type="button" className="home-text-button" onClick={onNotes}>View all</button></header>
         {(archivePartial || !online) && <p className="home-panel-hint">{!online?'Available on this device':'Showing loaded notes while your archive loads…'}</p>}
         {archiveError && <p className="home-error" role="alert">{archiveError}</p>}
-        {summary.notes.length ? <ul className="home-note-list">{summary.notes.map(note=><li key={note.id}><button type="button" onClick={()=>onOpen(note)}><span className="home-item-icon note"><DocumentBlank size={19}/></span><span className="home-note-body"><span className="home-note-title">{note.name}</span><span className="home-note-excerpt">{noteExcerpt(note)}</span></span><span className="home-item-date"><Updated item={note}/></span></button></li>)}</ul> : <div className="home-empty"><DocumentBlank size={22}/><p>{archiveLoading?'Loading notes…':archivePartial?'Loading more notes…':'No recent notes to show.'}<span>{!archiveLoading&&!archivePartial?'Create a note or unlock its folder to see it here.':''}</span></p></div>}
+        {summary.notes.length ? <ul className="home-note-list">{summary.notes.map(note=><li key={note.id}><button type="button" onClick={()=>onOpen(note)} aria-label={`Open note: ${note.name}`}><span className="home-note-title" title={note.name}>{note.name}</span><span className="home-note-updated"><Updated item={note} today={date}/></span></button></li>)}</ul> : <div className="home-empty"><DocumentBlank size={22}/><p>{archiveLoading?'Loading notes…':archivePartial?'Loading more notes…':'No recent notes to show.'}<span>{!archiveLoading&&!archivePartial?'Create a note or unlock its folder to see it here.':''}</span></p></div>}
       </section>
       <section className="home-panel home-folders" aria-labelledby="home-folders-title">
         <header className="home-panel-heading"><h2 id="home-folders-title"><PinFilled size={15}/>Pinned folders</h2><button type="button" className="home-text-button" onClick={onMemories}>All memories</button></header>

@@ -23,12 +23,5 @@ export function homeSummary(items, tasks, date, unlockedFolders = {}) {
   const folders = active.filter(item => item.kind === 'folder' && item.pinned).sort(recentFirst)
   const completed = today.filter(task => task.done).length
   return { tasks: today.slice(0, 5), total: today.length, completed, pending: today.length - completed,
-    notes: notes.slice(0, 4), folders: folders.slice(0, 6) }
-}
-
-export function noteExcerpt(note) {
-  const text = (note.content || '').replace(/\s+/g, ' ').trim()
-  if (text) return text.length > 110 ? text.slice(0, 109) + '…' : text
-  if (note.checklist?.length) return `${note.checklist.filter(row => row.checked).length} of ${note.checklist.length} checklist items complete`
-  return note.noteAttachments?.length ? 'Note with attachments' : 'Open this note to keep writing.'
+    notes: notes.slice(0, 3), folders: folders.slice(0, 6) }
 }

@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { homeSummary, noteExcerpt } from '../src/home-utils.js'
+import { homeSummary } from '../src/home-utils.js'
 import { folderLockToken } from '../src/folder-lock.js'
 
 const timestamp = value => ({ toMillis: () => value })
@@ -40,15 +40,8 @@ test('Home recent notes and pinned folders use update time and stay within their
   items.push(...Array.from({ length: 8 }, (_, index) => ({ id: `folder-${index}`, name: `Folder ${index}`, kind: 'folder', parentId: null, pinned: true, updatedAt: timestamp(index) })))
   items.push({ id: 'favorite', name: 'Favorite only', kind: 'folder', parentId: null, favorite: true, updatedAt: timestamp(999) })
   const summary = homeSummary(items, [], '2026-11-24')
-  assert.deepEqual(summary.notes.map(item => item.id), ['note-8', 'note-7', 'note-6', 'note-5'])
+  assert.deepEqual(summary.notes.map(item => item.id), ['note-8', 'note-7', 'note-6'])
   assert.equal(summary.folders.length, 6)
   assert.equal(summary.folders[0].id, 'folder-7')
   assert.ok(!summary.folders.some(item => item.id === 'favorite'))
-})
-
-test('Home note excerpts stay readable for long text, checklist notes and attachment-only notes', () => {
-  assert.equal(noteExcerpt({ content: '  One\n  two  ' }), 'One two')
-  assert.equal(noteExcerpt({ content: 'a'.repeat(140) }).length, 110)
-  assert.equal(noteExcerpt({ checklist: [{ checked: true }, { checked: false }] }), '1 of 2 checklist items complete')
-  assert.equal(noteExcerpt({ noteAttachments: [{ id: 'file' }] }), 'Note with attachments')
 })
