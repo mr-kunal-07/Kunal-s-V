@@ -4,7 +4,7 @@ import { materialize, schedulesFor } from './daybook-service'
 import { explainError } from './firebase'
 import useOnline from './useOnline'
 
-// Home and Day Book generate the same deterministic recurring occurrences.
+// Day Book generates deterministic occurrences for saved recurring schedules.
 export default function useDayBookSchedules(uid, date) {
   const online = useOnline()
   const [state, setState] = useState({ templates: [], fromCache: true, error: '' })

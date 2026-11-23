@@ -3,7 +3,6 @@ import { Add, Calendar, Checkmark, DocumentBlank, Edit, Folder, FolderAdd, Locke
 import { homeSummary } from './home-utils'
 import { createPlannedTask, updateTask } from './daybook-service'
 import { explainError } from './firebase'
-import useDayBookSchedules from './useDayBookSchedules'
 import useOnline from './useOnline'
 
 function Updated({ item, today }) {
@@ -16,12 +15,12 @@ function Updated({ item, today }) {
 }
 
 export default function HomeDashboard({ uid, date, taskState, items, unlockedFolders, archiveLoading, archivePartial, archiveError, onOpen, onNote, onFolder, onUpload, onDayBook, onNotes, onMemories, uploading, toast }) {
-  const online = useOnline(), schedules = useDayBookSchedules(uid, date)
+  const online = useOnline()
   const [title, setTitle] = useState(''), [adding, setAdding] = useState(false), [saving, setSaving] = useState([]), [error, setError] = useState('')
   const input = useRef(null), addLock = useRef(false), taskLocks = useRef(new Set())
   const summary = homeSummary(items, taskState.tasks, date, unlockedFolders)
   const dateLabel = new Intl.DateTimeFormat('en-IN', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date(date + 'T12:00:00Z'))
-  const taskError = error || taskState.error || schedules.error
+  const taskError = error || taskState.error
   async function addTask(event) {
     event.preventDefault()
     if (!title.trim() || addLock.current) return
