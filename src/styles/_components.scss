@@ -18,6 +18,20 @@
   color-scheme: light;
 }
 
+.install-app-button { display:inline-flex; align-items:center; gap:6px; border:1px solid var(--line); padding:5px 9px; color:var(--accent); background:transparent; font-size:12px; line-height:1.4; white-space:nowrap; }
+.install-app-button:hover { background:var(--tint); }
+.login-page .install-app-button { margin-left:auto; margin-right:14px; }
+.offline-status { display:flex; align-items:center; gap:7px; color:var(--muted); font-size:12px; min-height:26px; margin-bottom:8px; flex-wrap:wrap; }
+.offline-status.is-offline { color:var(--accent); }
+.offline-status button { border:0; background:none; color:var(--accent); text-decoration:underline; font-size:12px; padding:2px 4px; }
+.offline-help { margin:-3px 0 14px; color:var(--muted); font-size:12px; line-height:1.6; }
+.pwa-notice { position:fixed; z-index:10000; bottom:14px; right:14px; left:auto; max-width:calc(100vw - 28px); display:flex; align-items:center; gap:10px; padding:10px 12px; color:var(--ink); border:1px solid var(--line); background:var(--surface); box-shadow:0 3px 20px #302a2622; font-size:12px; line-height:1.5; }
+.pwa-notice button { display:inline-flex; align-items:center; color:var(--accent); background:none; border:0; padding:3px; font-size:12px; }
+.install-help p { margin-top:14px; line-height:1.7; }
+.recovery-draft { border-top:1px solid var(--line); margin-top:14px; padding-top:12px; }
+.recovery-draft pre { max-height:250px; overflow:auto; white-space:pre-wrap; overflow-wrap:anywhere; font:12px/1.6 monospace; padding:10px; background:var(--canvas); }
+@media(max-width:600px) { .install-app-button { padding:4px 6px; } .install-app-button>span { display:none; } .offline-status { font-size:11px; } .pwa-notice { left:10px; right:10px; bottom:10px; } }
+
 [data-theme] body, [data-theme] .dashboard, [data-theme] .boot-loading { background:var(--canvas); color:var(--ink); }
 
 [data-theme] .topbar { background:var(--header); color:var(--header-text); border-color:var(--header); }

@@ -14,10 +14,10 @@ export default function useDayBookTasks(uid, date) {
     const timer = setTimeout(() => {
       if (active) setState(current => ({ ...current, loading: false, error: 'Day Book is taking too long to connect. Check your connection and Firestore rules.' }))
     }, 18000)
-    const stop = onSnapshot(query(tasksFor(uid), where('date', '==', date)), snapshot => {
+    const stop = onSnapshot(query(tasksFor(uid), where('date', '==', date)), {includeMetadataChanges:true}, snapshot => {
       if (!active) return
       clearTimeout(timer)
-      setState({ key, tasks: tasksForDay(snapshot.docs.map(entry => ({ id: entry.id, ...entry.data() })), date), loading: false, error: '' })
+      setState({ key, tasks: tasksForDay(snapshot.docs.map(entry => ({ id: entry.id, ...entry.data({serverTimestamps:'estimate'}) })), date), fromCache:snapshot.metadata.fromCache, loading: false, error: '' })
     }, error => {
       if (!active) return
       clearTimeout(timer)

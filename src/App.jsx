@@ -1,4 +1,7 @@
 import MemoryViewer from './MemoryViewer'
+import OfflineStatus from './OfflineStatus'
+import InstallApp from './InstallApp'
+import { isOffline, recoveryStore, requireInternet } from './offline'
 import { CreateFolderDialog, UnlockFolderDialog } from './FolderDialogs'
 import { folderAccess, visibleFolderItems, requireFolderAccess } from './folder-lock'
 import useArchive from './useArchive'
@@ -47,7 +50,7 @@ function Login() {
     catch (err) { setError(explainError(err)) } finally { setBusy(false) }
   }
   return <div className="login-page">
-    <header className="topbar"><Brand /><Locked size={18} /></header>
+    <header className="topbar"><Brand /><InstallApp/><Locked size={18} /></header>
     <main className="login-main">
       <section className="login-panel"><div className="login-form-wrap"><h1 className="login-heading">Sign in</h1><form onSubmit={submit}>
         <TextInput id="email" labelText="Username" type="text" autoComplete="username" placeholder="Enter your username" required value={email} onChange={e => setEmail(e.target.value)} disabled={busy} />
@@ -117,7 +120,7 @@ function Dashboard({ user }) {
   useEffect(() => { if (!toast) return; const id = setTimeout(() => setToast(''), 5000); return () => clearTimeout(id) }, [toast])
   useEffect(() => { setSearch(''); setMenu(null) }, [folderId, filter])
   useEffect(() => { if(!hasMore || filter === 'daybook' || (!folderId && filter === 'all' && !search.trim()))return; const timer=setTimeout(()=>{loadComplete().catch(()=>{})},search.trim()?350:0);return()=>clearTimeout(timer) },[folderId,filter,search,hasMore,loadComplete])
-  async function prepareArchive(action) { try { const all = hasMore ? await loadComplete() : archiveItems; setOperationItems(all); action(all) } catch(err) { setError(explainError(err)) } }
+  async function prepareArchive(action) { try { requireInternet('Bulk archive changes'); const all = hasMore ? await loadComplete() : archiveItems; setOperationItems(all); action(all) } catch(err) { setError(explainError(err)) } }
   function requireAccess(targets, all = archiveItems) { requireFolderAccess(targets, all, unlockedFolders) }
   function protectAction(item, action, destination = null) {
     const access = folderAccess(item, archiveItems, unlockedFolders)
@@ -165,19 +168,21 @@ function Dashboard({ user }) {
     if (!name.trim() || noteRecording) return
     setBusy(true)
     try {
+      if (modal.kind === 'note' && isOffline() && (noteAttachments.some(item=>item.file) || (modal.item?.noteAttachments || []).some(old=>!noteAttachments.some(item=>item.id===old.id)))) throw new Error('Save your text and checklist offline. Reconnect before adding or removing stored attachments.')
       if (modal.item) requireAccess([modal.item])
       else if (folderId) requireAccess([routeFolder])
       const uploaded = []
+      const attachmentChanges = noteAttachments.some(item=>item.file) || (modal.item?.noteAttachments || []).some(old=>!noteAttachments.some(item=>item.id===old.id))
     let attachments = noteAttachments
     if(modal.kind === 'note') {
       try { attachments = []; for(const item of noteAttachments) { const saved = item.file ? await uploadNoteAttachment(user.uid,item) : item; attachments.push(saved); if(item.file)uploaded.push(saved) } }
       catch(error) { await Promise.allSettled(uploaded.map(deleteNoteAttachment)); throw error }
     }
     const data = { name: name.trim(), ...(modal.kind === 'note' ? { content: text, noteHtml, noteAttachments: attachments, checklist } : {}) }
-      try { if (modal.item) await updateMemory(user.uid, modal.item.id, data)
-      else await createMemory(user.uid, { ...data, kind: modal.kind, parentId: folderId || null }) } catch(error) { await Promise.allSettled(uploaded.map(deleteNoteAttachment)); throw error }
+      try { if (modal.item) await updateMemory(user.uid, modal.item.id, data, {waitForServer:attachmentChanges})
+      else await createMemory(user.uid, { ...data, kind: modal.kind, parentId: folderId || null }, {waitForServer:attachmentChanges}) } catch(error) { await Promise.allSettled(uploaded.map(deleteNoteAttachment)); throw error }
       if(modal.kind === 'note') await Promise.allSettled((modal.item?.noteAttachments || []).filter(old => !attachments.some(item => item.id === old.id)).map(deleteNoteAttachment))
-      setToast(modal.item ? 'Memory updated.' : modal.kind === 'folder' ? 'Folder created.' : 'Note saved.'); setModal(null)
+      setToast(isOffline() ? 'Saved on this device. It will sync when you reconnect.' : modal.item ? 'Memory updated.' : modal.kind === 'folder' ? 'Folder created.' : 'Note saved.'); setModal(null)
     } catch (err) { setModalError(explainError(err)) } finally { setBusy(false) }
   }
   async function togglePin(item) { try { requireAccess([item]); await updateMemory(user.uid, item.id, { pinned: !item.pinned }); setMenu(null) } catch (err) { setError(explainError(err)) } }
@@ -220,6 +225,7 @@ function Dashboard({ user }) {
   }
   async function upload(entries) {
     if (!entries.length || uploadLock.current || invalidFolder || invalidDestination) return
+    if (isOffline()) { setError('Reconnect before uploading files or folders. You can still create notes and tasks offline.'); return }
     uploadLock.current = true; setError(''); let completed = 0
     const folderMap = new Map([['', folderId || null]])
     async function ensureFolder(path) {
@@ -244,7 +250,7 @@ function Dashboard({ user }) {
   }
   const hasFiles = e => Array.from(e.dataTransfer.types).includes('Files')
   return <div className="app-shell">
-    <header className="topbar"><button className="icon-button mobile-menu" aria-label="Toggle navigation" aria-expanded={mobileNav} onClick={() => setMobileNav(!mobileNav)}>{mobileNav ? <Close size={20} /> : <Menu size={20} />}</button><Brand /><div className="header-account"><span className="account-avatar">{user.email?.[0]?.toUpperCase() || 'K'}</span><span className="account-email">{user.email?.endsWith("@task-d72fd.firebaseapp.com") ? user.email.split("@")[0] : user.email}</span><button className="icon-button" aria-label="Sign out" onClick={() => signOut(auth).catch(err => setError(explainError(err)))}><Logout size={20} /></button></div></header>
+    <header className="topbar"><button className="icon-button mobile-menu" aria-label="Toggle navigation" aria-expanded={mobileNav} onClick={() => setMobileNav(!mobileNav)}>{mobileNav ? <Close size={20} /> : <Menu size={20} />}</button><Brand /><div className="header-account"><InstallApp/><span className="account-avatar">{user.email?.[0]?.toUpperCase() || 'K'}</span><span className="account-email">{user.email?.endsWith("@task-d72fd.firebaseapp.com") ? user.email.split("@")[0] : user.email}</span><button className="icon-button" aria-label="Sign out" onClick={() => { if(recoveryStore.list(user.uid).length){setError('Let pending changes sync, or review failed changes in Sync details, before signing out.');return} signOut(auth).catch(err => setError(explainError(err))) }}><Logout size={20} /></button></div></header>
     {mobileNav && <button className="nav-backdrop" aria-label="Close navigation" onClick={() => setMobileNav(false)} />}
     <aside className={`sidebar ${mobileNav ? 'is-open' : ''}`}>
       <div className="sidebar-label">PERSONAL SPACE</div>
@@ -259,7 +265,7 @@ function Dashboard({ user }) {
       <div className="storage-panel"><div><Cloud size={20} /><span>Your archive</span><span className="storage-size">{hasMore ? <button className="load-totals-button" onClick={() => loadComplete().catch(() => {})} disabled={loadingMore}>Load totals</button> : fileSize(totalBytes)}</span></div><p>{files.length}{hasMore ? '+' : ''} files collected</p></div>
     </aside>
     <main className="dashboard" onDragEnter={e => { if (hasFiles(e)) { e.preventDefault(); dragDepth.current++; setDragging(true) } }} onDragOver={e => { if (hasFiles(e)) e.preventDefault() }} onDragLeave={() => { dragDepth.current--; if (dragDepth.current <= 0) setDragging(false) }} onDrop={drop}>
-      <div className="dashboard-inner">{filter === 'daybook' ? <DayBook uid={user.uid} date={dayBookDate} onDateChange={setDayBookDate} taskState={dayBookTasks} /> : folderBlocked ? <div className="empty-state locked-folder-state"><div className="empty-icon"><Locked size={40} /></div><h2>Password-protected folder</h2><p>{routeAccess.folder ? `Unlock “${routeAccess.folder.name}” to view its contents.` : 'The folder path is still loading.'}</p>{routeAccess.folder && <Button renderIcon={Locked} onClick={() => setUnlockRequest({ folder: routeAccess.folder })}>Unlock folder</Button>}<Button kind="ghost" onClick={() => selectFilter('all')}>Back to my space</Button></div> : <><div className="dashboard-topbar"><div className="breadcrumb"><button onClick={() => selectFilter('all')}>My space</button>{(crumbs.length > 0 || filter !== 'all') && <ChevronRight size={14} />}{crumbs.length ? crumbs.map((item, i) => <span key={item.id}><button onClick={() => navigate(`/dashboard/${item.id}`)}>{item.name}</button>{i < crumbs.length - 1 && <ChevronRight size={14} />}</span>) : filter !== 'all' ? <span>{title}</span> : null}</div>
+      <div className="dashboard-inner"><OfflineStatus user={user} items={archiveItems} unlockedFolders={unlockedFolders}/>{filter === 'daybook' ? <DayBook uid={user.uid} date={dayBookDate} onDateChange={setDayBookDate} taskState={dayBookTasks} /> : folderBlocked ? <div className="empty-state locked-folder-state"><div className="empty-icon"><Locked size={40} /></div><h2>Password-protected folder</h2><p>{routeAccess.folder ? `Unlock “${routeAccess.folder.name}” to view its contents.` : 'The folder path is still loading.'}</p>{routeAccess.folder && <Button renderIcon={Locked} onClick={() => setUnlockRequest({ folder: routeAccess.folder })}>Unlock folder</Button>}<Button kind="ghost" onClick={() => selectFilter('all')}>Back to my space</Button></div> : <><div className="dashboard-topbar"><div className="breadcrumb"><button onClick={() => selectFilter('all')}>My space</button>{(crumbs.length > 0 || filter !== 'all') && <ChevronRight size={14} />}{crumbs.length ? crumbs.map((item, i) => <span key={item.id}><button onClick={() => navigate(`/dashboard/${item.id}`)}>{item.name}</button>{i < crumbs.length - 1 && <ChevronRight size={14} />}</span>) : filter !== 'all' ? <span>{title}</span> : null}</div>
       <div className="page-heading"><div className="heading-actions"><Button className="heading-folder-button" aria-label="New folder" title="New folder" kind="tertiary" renderIcon={FolderAdd} onClick={() => showModal('folder')} disabled={filter === 'trash' || invalidFolder || invalidDestination || !!uploading}><span className="heading-action-text">New folder</span></Button><Button className="heading-upload-button" aria-label="Upload files" title="Upload files" renderIcon={Upload} onClick={() => filesInput.current.click()} disabled={filter === 'trash' || invalidFolder || invalidDestination || !!uploading}><span className="heading-action-text">Upload</span></Button></div></div></div>
       <ErrorNotice message={error} onClose={() => setError('')} />
       {toast && <div className="vault-toast" role="status" aria-live="polite"><Checkmark size={16} aria-hidden="true"/><span>{toast.replace(' selected items ', ' items ')}</span><button type="button" aria-label="Dismiss message" onClick={() => setToast('')}><Close size={16}/></button></div>}

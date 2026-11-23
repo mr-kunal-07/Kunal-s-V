@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app'
 import { getAuth } from 'firebase/auth'
-import { getFirestore } from 'firebase/firestore'
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, connectFirestoreEmulator } from 'firebase/firestore'
+import { connectAuthEmulator } from 'firebase/auth'
 import { getStorage } from 'firebase/storage'
 
 const app = initializeApp({
@@ -13,8 +14,13 @@ const app = initializeApp({
   measurementId: 'G-6M6X2H6QWG',
 })
 export const auth = getAuth(app)
-export const db = getFirestore(app)
+export const db = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) })
 export const storage = getStorage(app)
+// Explicitly opt-in local integration testing; production builds always use Firebase.
+if (import.meta.env.DEV && import.meta.env.VITE_FIREBASE_EMULATORS === 'true') {
+  connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true })
+  connectFirestoreEmulator(db, '127.0.0.1', 8088)
+}
 export function explainError(error) {
   const messages = {
     'auth/invalid-credential': 'The email ID or password is incorrect.',

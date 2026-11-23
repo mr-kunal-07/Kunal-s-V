@@ -1,5 +1,6 @@
 import { setTrashed } from './trash'
 import { useState } from 'react'
+import { requireInternet } from './offline'
 import { Modal, Select, SelectItem, TextInput, InlineNotification } from '@carbon/react'
 import { writeBatch, doc, serverTimestamp } from 'firebase/firestore'
 import { db, explainError } from './firebase'
@@ -18,6 +19,7 @@ export default function BulkDialog({ action, selected, items, uid, unlockedFolde
     if(busy) return
     setBusy(true);setError(''); const completed=[]
     try {
+      requireInternet('Bulk archive changes')
       requireFolderAccess(expanded, items, unlockedFolders)
       if (action === 'move' && destination) requireFolderAccess([items.find(item => item.id === destination)], items, unlockedFolders)
       if(action==='move' || action==='tag') {

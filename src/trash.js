@@ -3,7 +3,9 @@ import { db } from './firebase'
 import { memoriesCollection } from './memories'
 import { doc } from 'firebase/firestore'
 import { expandSelection } from './bulk-utils'
+import { requireInternet } from './offline'
 export async function setTrashed(uid, selected, items, trashed) {
+  requireInternet('Changing Trash')
   const targets = expandSelection(selected, items)
   if (!trashed) {
     const ids = new Set(targets.map(i => i.id))

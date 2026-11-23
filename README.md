@@ -2,6 +2,22 @@
 
 Mobile-first React + Vite app using IBM Carbon, Firebase Authentication, Firestore, and Storage.
 
+## Offline access and phone installation
+
+Keep is an installable PWA. Build with `npm run build`, then use `npm run preview -- --host 127.0.0.1 --port 4174` to test the built service worker locally. The development server serves live source; the production build precaches the app, local fonts and icons for offline launches. Firebase data and uploaded media are not cached by the service worker.
+
+On your phone, open the deployed **HTTPS** site. Android Chrome: choose **Install app** in Keep or the browser menu. iPhone/iPad Safari: **Share → Add to Home Screen → Add**. `127.0.0.1` refers to the phone itself, so use your hosted URL rather than the computer's localhost address. The manifest includes standalone display, regular and maskable PNG icons, an Apple touch icon, and shortcuts to Day Book and the archive.
+
+Sign in online first and open the notes/dates you want available offline. Firestore uses persistent IndexedDB storage with coordination across tabs. You can create/edit text notes, checklists, one-time tasks, and recurring task schedules offline. Saves finish after the local cache acknowledges the change. Pending writes survive reopening and sync automatically when Keep is open and connected again; closing the app does not run a background sync job. Only previously loaded archive records/tasks are available offline. Concurrent edits to the same field follow Firestore's last-write-wins behavior.
+
+The status line distinguishes offline, connecting, syncing, and synced states. A separate local recovery journal keeps submitted note/task text if a server later rejects a change; **Sync details / Recover text** lets you copy it after fixing the problem. Recovery text for notes inside locked folders stays hidden until the folder is unlocked. Keep blocks sign-out while recoverable changes are pending. Do not clear browser/app storage before syncing: cached records and unsynced changes are stored on that device. Use the offline feature on your personal device. Folder passwords remain an application privacy lock rather than encryption.
+
+File/image/audio uploads, attachment changes, permanent file deletion and Carry yesterday require internet. Existing attachments remain linked when editing note text offline. Recurring instances for other dates are generated after reconnection. New releases prompt for an update rather than automatically reloading an open editor.
+
+The existing production deployment is **GitHub → Vercel**. Push the tested changes to the connected production branch to deploy. `vercel.json` selects Vite, runs `npm run build`, publishes `dist`, enables SPA routes such as `/day-book`, and sets fresh service-worker/manifest headers. Firebase remains the authentication, Firestore and file-storage backend; no Firebase Hosting deployment or Firebase CLI sign-in is needed for this update. No Firestore/Storage rule changes are required.
+
+Validation: `npm test`; `npm run build`; `npm run check:pwa`. `npm run test:offline` uses local Auth (`9099`) and Firestore (`8088`) emulators plus the IndexedDB test adapter to check offline acknowledgement, persistence across replacing the app instance, exact-once visible records after reconnect, and recoverable rejected writes. `tests/offline-browser.html` supports manual real-browser validation when served with `VITE_FIREBASE_EMULATORS=true`; this opt-in test configuration is removed from production builds. The Rollup build dependency uses its official WebAssembly package to avoid a native module blocked by Windows security.
+
 ## Local development
 
 ```powershell
@@ -34,7 +50,7 @@ Rules have been supplied locally; they are not automatically deployed by running
 - Delete files, notes, and empty folders with confirmation. Delete folder contents first.
 - Accessible Carbon forms, dialogs, notifications, loading/error/empty states and responsive navigation.
 
-All authentication and archive data use Firebase. No mock account or browser-local archive is used. Firebase Analytics is not initialized because it is not needed for a private archive.
+All authentication and cloud archive data use Firebase. Offline copies and pending note/task changes are cached on the device; there is no separate mock account or local-only archive. Firebase Analytics is not initialized because it is not needed for a private archive.
 
 ## Build and hosting
 
@@ -43,7 +59,7 @@ npm run build
 npm run preview
 ```
 
-`dist` is the output. Firebase Hosting SPA rewrites are included in `firebase.json` so direct `/login` and `/dashboard` URLs work. With Firebase CLI authorization, deploy using `firebase deploy --only hosting`.
+`dist` is the output. Vercel deploys it from the connected GitHub repository using `vercel.json`. Direct `/login`, `/dashboard` and `/day-book` routes load the SPA. The existing Firebase rules/config files remain available for managing the data backend.
 
 ## Username accounts
 
